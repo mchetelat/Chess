@@ -17,18 +17,21 @@ import students.chetelatmarcalain.game.CustomBoard;
 
 public class ChetelatMarcAlain implements Agent {
 
+	private Move blackNextMove;
+
+	private History history;
+
 	private Color playerColor;
 
-	private Move blackNextMove;
+	private WinnerRules rules = new PawnChessWinner();
 
 	private Move whiteNextMove;
 
 	private final int MATERIAL = 50;
 
-	private History history;
-
-	private WinnerRules rules = new PawnChessWinner();
-
+	/**
+	 * Default C'tor.
+	 */
 	public ChetelatMarcAlain() {
 
 	}
@@ -40,37 +43,19 @@ public class ChetelatMarcAlain implements Agent {
 	 */
 	@Override
 	public String developerAlias() {
-		// TODO If you want to use a pseudonym instead of your real name on the
-		// (published) list of results
-		// return your pseudonym here
-		return this.getClass().getSimpleName();
+		return "mac";
 	}
 
-	/*
-	 * (non-Javadoc)
+	/**
+	 * Get all possible moves for a player.
 	 * 
-	 * @see ch.uzh.ifi.ddis.pai.chessim.game.Agent#nextMove(ch.uzh.ifi.ddis.pai.
-	 * chessim.game.Color, ch.uzh.ifi.ddis.pai.chessim.game.Board,
-	 * ch.uzh.ifi.ddis.pai.chessim.game.History, long)
+	 * @param board
+	 *            the board
+	 * @param player
+	 *            the player color
+	 * @return A map containing all possible moves and the board after applying
+	 *         a specific move.
 	 */
-	@Override
-	public Move nextMove(Color player, Board board, History history, long timeLimit) {
-		this.playerColor = player;
-		this.history = history;
-
-		minimax(new Board(board.height, board.width, board.figures()), 0, playerColor, Integer.MIN_VALUE,
-				Integer.MAX_VALUE);
-
-		switch (playerColor) {
-		case WHITE:
-			return whiteNextMove;
-		case BLACK:
-			return blackNextMove;
-		default:
-			return null;
-		}
-	}
-
 	private Map<Move, Board> getAllPossibleMoves(Board board, Color player) {
 		Map<Move, Board> ret = new HashMap<>();
 		Map<Coordinates, Figure> pawnList = board.figures(player);
@@ -81,6 +66,108 @@ public class ChetelatMarcAlain implements Agent {
 		return ret;
 	}
 
+	/**
+	 * Return an "infinite" number depending on the color.
+	 * 
+	 * @param player
+	 *            the player color
+	 * @return an "infinite" number
+	 */
+	private int infinite(Color player) {
+		switch (player) {
+		case WHITE:
+			return 10000; // inf
+		case BLACK:
+			return -10000;
+		default:
+			return 0;
+		}
+	}
+
+	/**
+	 * Evaluate if a pawn is passed and can not fail anymore.
+	 * 
+	 * @param board
+	 *            the board
+	 * @param field
+	 *            the pawn's coordinates
+	 * @return true if the pawn is safe, else false
+	 */
+	private boolean isPassedPawn(Board board, Coordinates field) {
+		// no pawn can stop it from promoting
+		Color opponent = (board.figureAt(field).color).getOtherColor();
+		Coordinates coordinates = null;
+		switch (opponent) {
+		case BLACK:
+			for (int row = field.getRow() + 1; row < 8; row++) {
+				if (board.figureAt(new Coordinates(row, field.getColumn())) != null) {
+					return false;
+				}
+			}
+
+			if (field.getColumn() > 0) {
+				for (int row = field.getRow() + 1; row < 8; row++) {
+					coordinates = new Coordinates(row, field.getColumn() - 1);
+					if (board.figureAt(coordinates) != null && board.figureAt(coordinates).color == opponent) {
+						return false;
+					}
+				}
+			}
+
+			if (field.getColumn() < 7) {
+				for (int row = field.getRow() + 1; row < 8; row++) {
+					coordinates = new Coordinates(row, field.getColumn() + 1);
+					if (board.figureAt(coordinates) != null && board.figureAt(coordinates).color == opponent) {
+						return false;
+					}
+				}
+			}
+			break;
+		case WHITE: // 8 to 0
+			for (int row = field.getRow() - 1; row >= 0; row--) {
+				if (board.figureAt(new Coordinates(row, field.getColumn())) != null) {
+					return false;
+				}
+			}
+
+			if (field.getColumn() > 0) {
+				for (int row = field.getRow() - 1; row >= 0; row--) {
+					coordinates = new Coordinates(row, field.getColumn() - 1);
+					if (board.figureAt(coordinates) != null && board.figureAt(coordinates).color == opponent) {
+						return false;
+					}
+				}
+			}
+
+			if (field.getColumn() < 7) {
+				for (int row = field.getRow() - 1; row >= 0; row--) {
+					coordinates = new Coordinates(row, field.getColumn() + 1);
+					if (board.figureAt(coordinates) != null && board.figureAt(coordinates).color == opponent) {
+						return false;
+					}
+				}
+			}
+			break;
+		default:
+			break;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Recursive function to simulate the game.
+	 * 
+	 * @param board
+	 *            the board
+	 * @param level
+	 *            the level
+	 * @param player
+	 *            the player color
+	 * @param alpha
+	 * @param beta
+	 * @return
+	 */
 	public int minimax(Board board, int level, Color player, int alpha, int beta) {
 		// ending condition
 		int nodeScore;
@@ -167,19 +254,61 @@ public class ChetelatMarcAlain implements Agent {
 		}
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see ch.uzh.ifi.ddis.pai.chessim.game.Agent#nextMove(ch.uzh.ifi.ddis.pai.
+	 * chessim.game.Color, ch.uzh.ifi.ddis.pai.chessim.game.Board,
+	 * ch.uzh.ifi.ddis.pai.chessim.game.History, long)
+	 */
+	@Override
+	public Move nextMove(Color player, Board board, History history, long timeLimit) {
+		this.playerColor = player;
+		this.history = history;
+
+		minimax(new Board(board.height, board.width, board.figures()), 0, playerColor, Integer.MIN_VALUE,
+				Integer.MAX_VALUE);
+
+		switch (playerColor) {
+		case WHITE:
+			return whiteNextMove;
+		case BLACK:
+			return blackNextMove;
+		default:
+			return null;
+		}
+	}
+
+	/**
+	 * Score calculation of a possible move.
+	 * 
+	 * @param board
+	 *            the board
+	 * @param player
+	 *            the player color
+	 * @return the score
+	 */
 	private int scoreCalculation(Board board, Color player) {
 		Color winner = rules.winner(board, history, player);
+
 		if (winner != null) {
 			return infinite(winner);
 		}
 
 		int score = 0;
-		int whiteSupportFile[] = new int[8];
-		int blackSupportFile[] = new int[8];
-		int whiteSpace[] = new int[8];
-		int blackSpace[] = new int[8];
-		boolean whiteFile[] = new boolean[8];
-		boolean blackFile[] = new boolean[8];
+		// White support per column
+		int whiteSupport[] = new int[8];
+		// Black support per column
+		int blackSupport[] = new int[8];
+		// Space behind first white pawn (columnwise)
+		int whiteSpaceBack[] = new int[8];
+		// Space behind first black pawn (columnwise)
+		int blackSpaceBack[] = new int[8];
+		// Columns which contain white pawn
+		boolean whiteColumn[] = new boolean[8];
+		// Columns which contain black pawn
+		boolean blackColumn[] = new boolean[8];
+		// Reflects if a player is one move ahead
 		int materialDifference = 0;
 		int support;
 
@@ -188,21 +317,23 @@ public class ChetelatMarcAlain implements Agent {
 				if (board.figureAt(new Coordinates(row, column)) != null) {
 					switch (board.figureAt(new Coordinates(row, column)).color) {
 					case WHITE:
-						whiteSpace[column] = Math.max(whiteSpace[column], row);
-						if (whiteFile[column])
-							score--; // doubled pawns
-						whiteFile[column] = true; // to check how many can block
-													// it
+						whiteSpaceBack[column] = Math.max(whiteSpaceBack[column], row);
+						if (whiteColumn[column])
+							score--; // double pawns in column
 
-						whiteSupportFile[column]++;
+						// To check how many can block it
+						whiteColumn[column] = true;
+
+						whiteSupport[column]++;
 						if (column > 0)
-							whiteSupportFile[column - 1]++;
+							whiteSupport[column - 1]++;
 						if (column < 7)
-							whiteSupportFile[column + 1]++;
+							whiteSupport[column + 1]++;
 
 						materialDifference++;
 
-						support = 0; // calc support points
+						// Calculate support points for figure
+						support = 0;
 						Coordinates coordinates;
 						if (column > 0) {
 							coordinates = new Coordinates(row + 1, column - 1);
@@ -224,22 +355,21 @@ public class ChetelatMarcAlain implements Agent {
 									&& board.figureAt(coordinates).color == Color.WHITE)
 								support++;
 						}
-						if (support < 0) // same as material
+						if (support < 0)
 							score = score + MATERIAL * support;
 
 						break;
 					case BLACK:
-						blackSpace[column] = Math.min(blackSpace[column], row - 7);
-						// score -= (6 - row);
-						if (blackFile[column])
+						blackSpaceBack[column] = Math.min(blackSpaceBack[column], row - 7);
+						if (blackColumn[column])
 							score++;
-						blackFile[column] = true;
+						blackColumn[column] = true;
 
-						blackSupportFile[column]++;
+						blackSupport[column]++;
 						if (column > 0)
-							blackSupportFile[column - 1]++;
+							blackSupport[column - 1]++;
 						if (column < 7)
-							blackSupportFile[column + 1]++;
+							blackSupport[column + 1]++;
 
 						materialDifference--;
 
@@ -275,44 +405,34 @@ public class ChetelatMarcAlain implements Agent {
 			}
 		}
 
-		score = score + MATERIAL * materialDifference; // maybe >5
+		score = score + MATERIAL * materialDifference;
 
-		// calculate minMovesToLose heuristic value
-		// closer the passed pawn the more point it gains
-		// find column score and aspiring winning pawns with more support
-		// calculate extra moves needed though
-
+		// Calculate minimum moves
+		// The closer the passed pawn the more points
+		// Find column score and aspire winnings pawns with more support
 		int minMovesWhite = 1000;
 		int minMovesBlack = 1000;
 		int supporter;
-		for (int i = 0; i < whiteSupportFile.length; i++) {
-			if (whiteSupportFile[i] > blackSupportFile[i]) {
-				// can get a passed pawn, minMovesWhite
-				// whiteSpace, whiteSupportFile
+		for (int i = 0; i < whiteSupport.length; i++) {
+			if (whiteSupport[i] > blackSupport[i]) {
 				if (i == 0)
-					supporter = 7 - whiteSpace[i + 1];
+					supporter = 7 - whiteSpaceBack[i + 1];
 				else if (i == 7)
-					supporter = 7 - whiteSpace[i - 1];
+					supporter = 7 - whiteSpaceBack[i - 1];
 				else
-					supporter = 7 - Math.max(whiteSpace[i - 1], whiteSpace[i + 1]);
+					supporter = 7 - Math.max(whiteSpaceBack[i - 1], whiteSpaceBack[i + 1]);
 
-				minMovesWhite = 7 - whiteSpace[i] + supporter - 2;
-			} else if (whiteSupportFile[i] < blackSupportFile[i]) {
-				// black passed pawn, minMovesBlack
+				minMovesWhite = 7 - whiteSpaceBack[i] + supporter - 2;
+			} else if (whiteSupport[i] < blackSupport[i]) {
 				if (i == 0)
-					supporter = blackSpace[i + 1] + 7;
+					supporter = blackSpaceBack[i + 1] + 7;
 				else if (i == 7)
-					supporter = blackSpace[i - 1] + 7;
+					supporter = blackSpaceBack[i - 1] + 7;
 				else
-					supporter = 7 + Math.min(blackSpace[i - 1], blackSpace[i + 1]);
-				minMovesBlack = blackSpace[i] + 7 + supporter - 2;
+					supporter = 7 + Math.min(blackSpaceBack[i - 1], blackSpaceBack[i + 1]);
+				minMovesBlack = blackSpaceBack[i] + 7 + supporter - 2;
 			}
 		}
-		// support array, add supporters
-		// space array of each
-		// if supporters > corresponding
-		// add space + dist_to_support
-		// dist_to_support is the others space - 2
 
 		int whiteBestPassed = -1;
 		int blackBestPassed = 100;
@@ -350,78 +470,5 @@ public class ChetelatMarcAlain implements Agent {
 
 		return score;
 
-	}
-
-	private boolean isPassedPawn(Board board, Coordinates field) {
-		// no pawn can stop it from promoting
-		Color opponent = (board.figureAt(field).color).getOtherColor();
-		Coordinates coordinates = null;
-		switch (opponent) {
-		case BLACK:
-			for (int row = field.getRow() + 1; row < 8; row++) {
-				if (board.figureAt(new Coordinates(row, field.getColumn())) != null) {
-					return false;
-				}
-			}
-
-			if (field.getColumn() > 0) {
-				for (int row = field.getRow() + 1; row < 8; row++) {
-					coordinates = new Coordinates(row, field.getColumn() - 1);
-					if (board.figureAt(coordinates) != null && board.figureAt(coordinates).color == opponent) {
-						return false;
-					}
-				}
-			}
-
-			if (field.getColumn() < 7) {
-				for (int row = field.getRow() + 1; row < 8; row++) {
-					coordinates = new Coordinates(row, field.getColumn() + 1);
-					if (board.figureAt(coordinates) != null && board.figureAt(coordinates).color == opponent) {
-						return false;
-					}
-				}
-			}
-			break;
-		case WHITE: // 8 to 0
-			for (int row = field.getRow() - 1; row >= 0; row--) {
-				if (board.figureAt(new Coordinates(row, field.getColumn())) != null) {
-					return false;
-				}
-			}
-
-			if (field.getColumn() > 0) {
-				for (int row = field.getRow() - 1; row >= 0; row--) {
-					coordinates = new Coordinates(row, field.getColumn() - 1);
-					if (board.figureAt(coordinates) != null && board.figureAt(coordinates).color == opponent) {
-						return false;
-					}
-				}
-			}
-
-			if (field.getColumn() < 7) {
-				for (int row = field.getRow() - 1; row >= 0; row--) {
-					coordinates = new Coordinates(row, field.getColumn() + 1);
-					if (board.figureAt(coordinates) != null && board.figureAt(coordinates).color == opponent) {
-						return false;
-					}
-				}
-			}
-			break;
-		default:
-			break;
-		}
-
-		return true;
-	}
-
-	private int infinite(Color player) {
-		switch (player) {
-		case WHITE:
-			return 10000; // inf
-		case BLACK:
-			return -10000;
-		default:
-			return 0;
-		}
 	}
 }
