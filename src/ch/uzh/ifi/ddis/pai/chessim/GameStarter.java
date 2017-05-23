@@ -16,6 +16,7 @@ import java.util.Date;
 
 import ch.uzh.ifi.ddis.pai.chessim.display.ConsoleDisplay;
 import ch.uzh.ifi.ddis.pai.chessim.dummyagents.AgressiveAgent;
+import ch.uzh.ifi.ddis.pai.chessim.dummyagents.RandomAgent;
 import ch.uzh.ifi.ddis.pai.chessim.game.Game;
 import ch.uzh.ifi.ddis.pai.chessim.game.Game.GameResult;
 import ch.uzh.ifi.ddis.pai.chessim.game.randomMover.RandomMoverPawnGame;
@@ -29,7 +30,7 @@ public class GameStarter {
 	 * @param args
 	 */
 	public static void main(String[] args){
-		Game game = new RandomMoverPawnGame(20000,1000, new ChetelatMarcAlain(), new AgressiveAgent(), 0.1, (new Date()).getTime());
+		Game game = new RandomMoverPawnGame(20000,1000, new AgressiveAgent(), new ChetelatMarcAlain(), 0.0, (new Date()).getTime());
 		game.registerDisplay(new ConsoleDisplay());
 		GameResult result = game.playGame();
 	}

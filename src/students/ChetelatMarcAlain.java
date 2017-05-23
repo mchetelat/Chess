@@ -76,7 +76,7 @@ public class ChetelatMarcAlain implements Agent {
 	private int infinite(Color player) {
 		switch (player) {
 		case WHITE:
-			return 10000; // inf
+			return 10000;
 		case BLACK:
 			return -10000;
 		default:
@@ -94,7 +94,7 @@ public class ChetelatMarcAlain implements Agent {
 	 * @return true if the pawn is safe, else false
 	 */
 	private boolean isPassedPawn(Board board, Coordinates field) {
-		// no pawn can stop it from promoting
+		// No pawn can stop it from promoting
 		Color opponent = (board.figureAt(field).color).getOtherColor();
 		Coordinates coordinates = null;
 		switch (opponent) {
@@ -123,7 +123,7 @@ public class ChetelatMarcAlain implements Agent {
 				}
 			}
 			break;
-		case WHITE: // 8 to 0
+		case WHITE:
 			for (int row = field.getRow() - 1; row >= 0; row--) {
 				if (board.figureAt(new Coordinates(row, field.getColumn())) != null) {
 					return false;
@@ -169,37 +169,34 @@ public class ChetelatMarcAlain implements Agent {
 	 * @return
 	 */
 	public int minimax(Board board, int level, Color player, int alpha, int beta) {
-		// ending condition
 		int nodeScore;
 		Color opponent = player.getOtherColor();
 		Map<Move, Board> moves = getAllPossibleMoves(board, player);
 
-		if (rules.winner(board, history, player) != null || moves.size() == 0 || level == 5) {
+		if (rules.winner(board, history, player) != null || moves.size() == 0 || level == 4) {
 			return scoreCalculation(board, player);
 		}
 
-		// alpha beta pruning
 		switch (player) {
 		case WHITE:
 			for (Entry<Move, Board> move : moves.entrySet()) {
 				Figure removedFigure = null;
 
-				// if beating opponents figure, remove it
+				// If beating opponents figure, remove it
 				if (board.figureAt(move.getKey().to) != null && board.figureAt(move.getKey().to).color != player) {
 					removedFigure = board.figureAt(move.getKey().to);
 					board = board.removeFigure(move.getKey().to);
 				}
 
-				// apply move
+				// Apply move
 				board = board.moveFigure(move.getKey().from, move.getKey().to);
 
-				// not calculated everytime, passed from parent to node - time
-				// efficient
 				nodeScore = minimax(new Board(board.height, board.width, board.figures()), level + 1, opponent, alpha,
 						beta);
 
-				// unapply move
+				// Un-apply move
 				board = board.moveFigure(move.getKey().to, move.getKey().from);
+				// Re-add the figure if removed before
 				if (removedFigure != null) {
 					CustomBoard customBoard = new CustomBoard(board.height, board.width, board.figures());
 					board = customBoard.addFigure(move.getKey().to, removedFigure);
@@ -207,25 +204,23 @@ public class ChetelatMarcAlain implements Agent {
 
 				if (nodeScore > alpha) {
 					alpha = nodeScore;
-					// update move
 					if (level == 0)
 						this.whiteNextMove = move.getKey();
 				}
 				if (alpha >= beta)
-					break; // no-need to consider further
+					// No need to consider further
+					break;
 			}
 			return alpha;
 		case BLACK:
 			for (Entry<Move, Board> move : moves.entrySet()) {
 				Figure removedFigure = null;
 
-				// if beating opponents figure, remove it
 				if (board.figureAt(move.getKey().to) != null && board.figureAt(move.getKey().to).color != player) {
 					removedFigure = board.figureAt(move.getKey().to);
 					board = board.removeFigure(move.getKey().to);
 				}
 
-				// apply move
 				board = board.moveFigure(move.getKey().from, move.getKey().to);
 
 				nodeScore = minimax(new Board(board.height, board.width, board.figures()), level + 1, opponent, alpha,
@@ -239,13 +234,11 @@ public class ChetelatMarcAlain implements Agent {
 
 				if (nodeScore < beta) {
 					beta = nodeScore;
-					// update move
-					// Take in account that shorter wins are better..
 					if (level == 0)
 						this.blackNextMove = move.getKey();
 				}
 				if (alpha >= beta)
-					break; // no-need to consider further
+					break;
 			}
 			return beta;
 
