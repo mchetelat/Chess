@@ -66,6 +66,7 @@ public abstract class Game {
 				}
 			}else{
 				for(Display display : displays){
+					System.out.println(nextMover);
 					display.moveNumber(history.size());
 				}
 				

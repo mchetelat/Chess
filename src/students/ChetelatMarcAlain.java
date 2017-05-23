@@ -4,8 +4,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import ch.uzh.ifi.ddis.pai.chessim.display.ConsoleDisplay;
-import ch.uzh.ifi.ddis.pai.chessim.display.Display;
 import ch.uzh.ifi.ddis.pai.chessim.game.Agent;
 import ch.uzh.ifi.ddis.pai.chessim.game.Board;
 import ch.uzh.ifi.ddis.pai.chessim.game.Color;
@@ -13,9 +11,9 @@ import ch.uzh.ifi.ddis.pai.chessim.game.Coordinates;
 import ch.uzh.ifi.ddis.pai.chessim.game.Figure;
 import ch.uzh.ifi.ddis.pai.chessim.game.History;
 import ch.uzh.ifi.ddis.pai.chessim.game.Move;
-import ch.uzh.ifi.ddis.pai.chessim.game.Pawn;
 import ch.uzh.ifi.ddis.pai.chessim.game.WinnerRules;
 import ch.uzh.ifi.ddis.pai.chessim.game.randomMover.PawnChessWinner;
+import students.chetelatmarcalain.game.CustomBoard;
 
 public class ChetelatMarcAlain implements Agent {
 
@@ -58,17 +56,10 @@ public class ChetelatMarcAlain implements Agent {
 	@Override
 	public Move nextMove(Color player, Board board, History history, long timeLimit) {
 		this.playerColor = player;
-		// for testing purposes
-		// this.board = board;
-		Map<Coordinates, Figure> testFigures = new HashMap<>();
-		// testFigures.put(new Coordinates(0, 3), new Pawn(Color.WHITE));
-		// testFigures.put(new Coordinates(0, 4), new Pawn(Color.WHITE));
-		// testFigures.put(new Coordinates(7, 3), new Pawn(Color.BLACK));
-		// testFigures.put(new Coordinates(7, 4), new Pawn(Color.BLACK));
-		// Board testBoard = new Board(8, 8, testFigures);
 		this.history = history;
 
-		minimax(board, 0, playerColor, Integer.MIN_VALUE, Integer.MAX_VALUE);
+		minimax(new Board(board.height, board.width, board.figures()), 0, playerColor, Integer.MIN_VALUE,
+				Integer.MAX_VALUE);
 
 		switch (playerColor) {
 		case WHITE:
@@ -80,24 +71,23 @@ public class ChetelatMarcAlain implements Agent {
 		}
 	}
 
+	private Map<Move, Board> getAllPossibleMoves(Board board, Color player) {
+		Map<Move, Board> ret = new HashMap<>();
+		Map<Coordinates, Figure> pawnList = board.figures(player);
+		for (Entry<Coordinates, Figure> pawn : pawnList.entrySet()) {
+			ret.putAll(pawn.getValue().possibleMoves(board));
+		}
+
+		return ret;
+	}
+
 	public int minimax(Board board, int level, Color player, int alpha, int beta) {
 		// ending condition
 		int nodeScore;
 		Color opponent = player.getOtherColor();
-		Map<Coordinates, Figure> pawnList = board.figures(player);
-		Map<Move, Board> moves = new HashMap<>();
-		// Figure removedFigure = null;
+		Map<Move, Board> moves = getAllPossibleMoves(board, player);
 
-		for (Entry<Coordinates, Figure> pawn : pawnList.entrySet()) {
-			moves.putAll(pawn.getValue().possibleMoves(board));
-		}
-
-		// System.out.println("level: " + level);
-		// System.out.println("current_player: " + player);
-		// Display db = new ConsoleDisplay();
-		// db.display(board);
-
-		if (rules.winner(board, history, player) != null || moves.size() == 0 || level == 2) {
+		if (rules.winner(board, history, player) != null || moves.size() == 0 || level == 5) {
 			return scoreCalculation(board, player);
 		}
 
@@ -105,9 +95,11 @@ public class ChetelatMarcAlain implements Agent {
 		switch (player) {
 		case WHITE:
 			for (Entry<Move, Board> move : moves.entrySet()) {
+				Figure removedFigure = null;
+
 				// if beating opponents figure, remove it
 				if (board.figureAt(move.getKey().to) != null && board.figureAt(move.getKey().to).color != player) {
-					// removedFigure = board.figureAt(move.getKey().to);
+					removedFigure = board.figureAt(move.getKey().to);
 					board = board.removeFigure(move.getKey().to);
 				}
 
@@ -116,13 +108,15 @@ public class ChetelatMarcAlain implements Agent {
 
 				// not calculated everytime, passed from parent to node - time
 				// efficient
-				nodeScore = minimax(board, level + 1, opponent, alpha, beta);
+				nodeScore = minimax(new Board(board.height, board.width, board.figures()), level + 1, opponent, alpha,
+						beta);
 
 				// unapply move
 				board = board.moveFigure(move.getKey().to, move.getKey().from);
-				// if (removedFigure != null) {
-				// board = board.addFigure(removedFigure);
-				// }
+				if (removedFigure != null) {
+					CustomBoard customBoard = new CustomBoard(board.height, board.width, board.figures());
+					board = customBoard.addFigure(move.getKey().to, removedFigure);
+				}
 
 				if (nodeScore > alpha) {
 					alpha = nodeScore;
@@ -136,17 +130,25 @@ public class ChetelatMarcAlain implements Agent {
 			return alpha;
 		case BLACK:
 			for (Entry<Move, Board> move : moves.entrySet()) {
+				Figure removedFigure = null;
+
 				// if beating opponents figure, remove it
 				if (board.figureAt(move.getKey().to) != null && board.figureAt(move.getKey().to).color != player) {
+					removedFigure = board.figureAt(move.getKey().to);
 					board = board.removeFigure(move.getKey().to);
 				}
 
 				// apply move
 				board = board.moveFigure(move.getKey().from, move.getKey().to);
 
-				nodeScore = minimax(board, level + 1, opponent, alpha, beta);
+				nodeScore = minimax(new Board(board.height, board.width, board.figures()), level + 1, opponent, alpha,
+						beta);
 
 				board = board.moveFigure(move.getKey().to, move.getKey().from);
+				if (removedFigure != null) {
+					CustomBoard customBoard = new CustomBoard(board.height, board.width, board.figures());
+					board = customBoard.addFigure(move.getKey().to, removedFigure);
+				}
 
 				if (nodeScore < beta) {
 					beta = nodeScore;
@@ -166,8 +168,7 @@ public class ChetelatMarcAlain implements Agent {
 	}
 
 	private int scoreCalculation(Board board, Color player) {
-		Color nextMover = player.getOtherColor();
-		Color winner = rules.winner(board, history, nextMover);
+		Color winner = rules.winner(board, history, player);
 		if (winner != null) {
 			return infinite(winner);
 		}
@@ -187,7 +188,7 @@ public class ChetelatMarcAlain implements Agent {
 				if (board.figureAt(new Coordinates(row, column)) != null) {
 					switch (board.figureAt(new Coordinates(row, column)).color) {
 					case WHITE:
-						whiteSpace[column] = Math.max(whiteSpace[column], row - 1);
+						whiteSpace[column] = Math.max(whiteSpace[column], row);
 						if (whiteFile[column])
 							score--; // doubled pawns
 						whiteFile[column] = true; // to check how many can block
@@ -204,7 +205,7 @@ public class ChetelatMarcAlain implements Agent {
 						support = 0; // calc support points
 						Coordinates coordinates;
 						if (column > 0) {
-							coordinates = new Coordinates(row - 1, column + 1);
+							coordinates = new Coordinates(row + 1, column - 1);
 							if (board.onBoard(coordinates) && board.figureAt(coordinates) != null
 									&& board.figureAt(coordinates).color == Color.BLACK)
 								support--;
@@ -218,7 +219,7 @@ public class ChetelatMarcAlain implements Agent {
 							if (board.onBoard(coordinates) && board.figureAt(coordinates) != null
 									&& board.figureAt(coordinates).color == Color.BLACK)
 								support--;
-							coordinates = new Coordinates(row + 1, column - 1);
+							coordinates = new Coordinates(row - 1, column + 1);
 							if (board.onBoard(coordinates) && board.figureAt(coordinates) != null
 									&& board.figureAt(coordinates).color == Color.WHITE)
 								support++;
@@ -228,7 +229,7 @@ public class ChetelatMarcAlain implements Agent {
 
 						break;
 					case BLACK:
-						blackSpace[column] = Math.min(blackSpace[column], row - 6);
+						blackSpace[column] = Math.min(blackSpace[column], row - 7);
 						// score -= (6 - row);
 						if (blackFile[column])
 							score++;
@@ -248,13 +249,13 @@ public class ChetelatMarcAlain implements Agent {
 							if (board.onBoard(coordinates) && board.figureAt(coordinates) != null
 									&& board.figureAt(coordinates).color == Color.WHITE)
 								support--;
-							coordinates = new Coordinates(row - 1, column + 1);
+							coordinates = new Coordinates(row + 1, column - 1);
 							if (board.onBoard(coordinates) && board.figureAt(coordinates) != null
 									&& board.figureAt(coordinates).color == Color.BLACK)
 								support++;
 						}
 						if (column < 7) {
-							coordinates = new Coordinates(row + 1, column - 1);
+							coordinates = new Coordinates(row - 1, column + 1);
 							if (board.onBoard(coordinates) && board.figureAt(coordinates) != null
 									&& board.figureAt(coordinates).color == Color.WHITE)
 								support--;
