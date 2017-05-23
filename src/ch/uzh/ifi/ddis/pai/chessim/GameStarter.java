@@ -14,14 +14,12 @@ package ch.uzh.ifi.ddis.pai.chessim;
 
 import java.util.Date;
 
-import students.ChetelatMarcAlain;
-import students.MatileRaphael;
 import ch.uzh.ifi.ddis.pai.chessim.display.ConsoleDisplay;
 import ch.uzh.ifi.ddis.pai.chessim.dummyagents.AgressiveAgent;
-import ch.uzh.ifi.ddis.pai.chessim.dummyagents.RandomAgent;
 import ch.uzh.ifi.ddis.pai.chessim.game.Game;
 import ch.uzh.ifi.ddis.pai.chessim.game.Game.GameResult;
 import ch.uzh.ifi.ddis.pai.chessim.game.randomMover.RandomMoverPawnGame;
+import students.ChetelatMarcAlain;
 
 public class GameStarter {
 
